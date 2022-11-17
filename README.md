@@ -1,5 +1,7 @@
 # simple-wikidata-db
 
+**THE FORK FOCUSES ON BUILDING A BIOLOGICAL DUMP OF WIKIDATA**
+
 This library provides a set of scripts to download the Wikidata dump, sort it into staging files, and query the data in these staged files in a distributed manner. The staging is optimized for (1) querying time, and (2) simplicity. 
 
 This library is helpful if you'd like to issue queries like: 
