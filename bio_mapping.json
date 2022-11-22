@@ -6,5 +6,15 @@
     "Q4915012": "biological pathway",
     "Q8386": "drug",
     "Q5058355": "cellular component",
-    "Q54817187": "cell line"
+    "Q54817187": "cell line",
+    "Q84467700": "protein",
+    "Q11173": "compound",
+    "Q113681859": "chemical entity",
+    "Q43460564": "chemical entity",
+    "Q417841": "protein",
+    "Q189118": "cell type",
+    "Q7868": "cell",
+    "Q7189713": "physiological condition",
+    "Q112965645": "symptom",
+    "Q7432": "species"
 }
