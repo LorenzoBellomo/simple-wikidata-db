@@ -16,5 +16,11 @@
     "Q7868": "cell",
     "Q7189713": "physiological condition",
     "Q112965645": "symptom",
-    "Q7432": "species"
+    "Q7432": "species",
+    "Q929833": "disease",
+    "Q67015883": "enzyme",
+    "Q8047": "enzyme",
+    "Q78155096": "protein",
+    "Q66559285": "protein",
+    "Q49695242": "enzyme"
 }

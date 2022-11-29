@@ -1,0 +1,11 @@
+Q18039443,O2
+Q14890978,hemochromatosis
+Q18312568,body weight
+Q29726548
+Q29811940,approximated
+Q29811940,app
+Q29812408,similar
+Q18252712
+Q29809275,fragment
+Q18053374,spatial
+Q29809012,rickets

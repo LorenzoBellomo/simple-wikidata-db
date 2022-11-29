@@ -14,7 +14,7 @@ IGNORE = {'wikibase-lexeme', 'musical-notation', 'globe-coordinate', 'commonsMed
           'wikibase-property', 'math', 'tabular-data'}
 
 
-with open("/raid/wikidata/bio_mapping.json", "r") as json_file:
+with open("../bio_mapping.json", "r") as json_file:
     CAT_MAPPING = ujson.load(json_file)
 CAT_KEYS = list(CAT_MAPPING.keys())
 
@@ -60,6 +60,26 @@ def process_json(obj, language_id="en"):
                 continue
             if value in CAT_KEYS:
                 bio = True
+    if not bio:
+        if "P279" in obj['claims']:
+            for claim in obj['claims']["P279"]:
+                if not claim['mainsnak']['snaktype'] == 'value':
+                    continue
+                value = process_mainsnak(claim['mainsnak'], language_id)
+                if value is None:
+                    continue
+                if value in CAT_KEYS:
+                    bio = True
+    if not bio:
+        if "P361" in obj['claims']:
+            for claim in obj['claims']["P361"]:
+                if not claim['mainsnak']['snaktype'] == 'value':
+                    continue
+                value = process_mainsnak(claim['mainsnak'], language_id)
+                if value is None:
+                    continue
+                if value in CAT_KEYS:
+                    bio = True
     if not bio:
         return {}
     id = obj['id']  # The canonical ID of the entity.
