@@ -6,13 +6,28 @@ import numpy as np
 import pandas as pd
 import re
 import json
+from collections import defaultdict
+import random
 
 from utils import jsonl_generator, get_batch_files
 
 #INSTANCE OF, SUBCLASS OF, TUTTE LE WIKI CAT IN CATEGORIE
 
-with open("/raid/wikidata/bio_mapping.json", "r") as json_file:
+with open("../bio_mapping.json", "r") as json_file:
     cat_mapping = json.load(json_file)
+blacklist_page = []
+blacklist_redirect_tmp = defaultdict(list)
+with open("../page-redirect_delete.txt", "r") as blacklist_file:
+    for line in blacklist_file.readlines():
+        splt = line.split(",")
+        if len(splt) == 2:
+            blacklist_redirect_tmp[splt[0]].append(splt[1])
+        else:
+            blacklist_page.append(splt[0])
+
+print(blacklist_page)
+blacklist_redirect = dict(blacklist_redirect_tmp)
+print(blacklist_redirect)
 
 cat_keys = list(cat_mapping.keys())
 processed_dir = "/raid/wikidata/bio_processed/"
@@ -63,13 +78,6 @@ def get_aliases(filename):
         filtered.append((item['qid'], item['alias']))
     return filtered
 
-def get_main_category(filename):
-    filtered = []
-    for item in jsonl_generator(filename):
-        if item["property_id"] == "P31" and item["value"] in cat_keys:
-            filtered.append((item['qid'], item['value']))
-    return filtered
-
 def get_pagelinks(filename):
     filtered = []
     for item in jsonl_generator(filename):
@@ -82,6 +90,8 @@ def get_categories(filename):
         if item["property_id"] == "P31" and item["value"] not in cat_keys:
             filtered.append((item['qid'], item['value']))
         elif item["property_id"] == "P279" and item["value"] not in cat_keys:
+            filtered.append((item['qid'], item['value']))
+        elif item["property_id"] == "P361" and item["value"] not in cat_keys:
             filtered.append((item['qid'], item['value']))
     return filtered
 
@@ -96,7 +106,6 @@ def get_cat_titles(categories, filename):
 def main():
     titles = parallel_exec(get_titles, "labels")
     aliases = parallel_exec(get_aliases, "aliases")
-    main_cats = parallel_exec(get_main_category, "entity_rels")
     categories = parallel_exec(get_categories, "entity_rels")
     all_ids = [a for a, _ in titles]
     cats = set()
@@ -110,10 +119,6 @@ def main():
             all_data[qid]['aliases'].append(a)
         else:
             all_data[qid] = {'title': a, 'aliases': [], 'categories': []}
-    for qid, a in main_cats:
-        if qid in all_data:
-            cats.add(a)
-            all_data[qid]['main_cat'] = a
     for qid, a in categories:
         if qid in all_data:
             cats.add(a)
@@ -126,19 +131,25 @@ def main():
 
     with open("../../for_ontotagme/page.csv", 'w') as page_file:
         for qid, info in all_data.items():
+            if qid in blacklist_page:
+                continue
             page_file.write(info['title'] + "\t" + str(qid) + "\n") 
             for alias in info['aliases']:
-                if alias != info['title']:
-                    page_file.write(alias + "\t" + qid + "\t" + str(all_data[qid]['title']) + "\n")
-                if "(" in alias:
-                    # CASE like: "ATP (Molecule)", add also "ATP" to the redirects
-                    new_alias = re.sub(r"[\(].*?[\)]", "", alias).strip()
-                    if new_alias != alias:
-                        page_file.write(new_alias + "\t" + qid + "\t" + str(all_data[qid]['title']) + "\n")
+                if qid not in blacklist_redirect.keys() or alias not in blacklist_redirect[qid]:
+                    if alias != info['title']:
+                        page_file.write(alias + "\t" + qid + "\t" + str(all_data[qid]['title']) + "\n")
+                    if "(" in alias:
+                        # CASE like: "ATP (Molecule)", add also "ATP" to the redirects
+                        new_alias = re.sub(r"[\(].*?[\)]", "", alias).strip()
+                        if new_alias != alias:
+                            page_file.write(new_alias + "\t" + qid + "\t" + str(all_data[qid]['title']) + "\n")
 
     with open("../../for_ontotagme/category.csv", 'w') as cat_file:
         for qid, info in all_data.items():
-            categories_str = ";".join([cat_mapping_titles.get(a, "NO TITLE") for a in list(info['categories'] + [info['main_cat']])])
+            all_cats = set([cat_mapping_titles.get(a, "NO TITLE") for a in list(info['categories'])])
+            for y in [cat_mapping[x] for x in info['categories'] if x in cat_mapping.keys()]:
+                all_cats.add(y)
+            categories_str = ";".join(list(all_cats))
             cat_file.write(info['title']+ '\t' + qid + "\t" + categories_str + "\n")
             for alias in info['aliases']:
                 cat_file.write(alias + '\t' + qid + "\t" + categories_str + "\n")
@@ -147,6 +158,12 @@ def main():
         for from_id, to_id in pagelinks:
             if from_id in all_data and to_id in all_data:
                 title_from = all_data[from_id]['title']
+                title_to = all_data[to_id]['title']
+                pagelinks_file.write(title_from + "\t" + title_to + "\n") 
+        keys_ = list(all_data.keys())
+        for qid, info in all_data.items():
+            title_from = all_data[qid]['title']
+            for to_id in random.sample(keys_, 5):
                 title_to = all_data[to_id]['title']
                 pagelinks_file.write(title_from + "\t" + title_to + "\n") 
 
