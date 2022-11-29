@@ -19,7 +19,7 @@ blacklist_page = []
 blacklist_redirect_tmp = defaultdict(list)
 with open("../page-redirect_delete.txt", "r") as blacklist_file:
     for line in blacklist_file.readlines():
-        splt = line.split(",")
+        splt = line.replace("\n", "").strip().split(",")
         if len(splt) == 2:
             blacklist_redirect_tmp[splt[0]].append(splt[1])
         else:
