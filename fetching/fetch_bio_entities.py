@@ -25,9 +25,7 @@ with open("../page-redirect_delete.txt", "r") as blacklist_file:
         else:
             blacklist_page.append(splt[0])
 
-print(blacklist_page)
 blacklist_redirect = dict(blacklist_redirect_tmp)
-print(blacklist_redirect)
 
 cat_keys = list(cat_mapping.keys())
 processed_dir = "/raid/wikidata/bio_processed/"
@@ -87,12 +85,18 @@ def get_pagelinks(filename):
 def get_categories(filename):
     filtered = []
     for item in jsonl_generator(filename):
-        if item["property_id"] == "P31" and item["value"] not in cat_keys:
+        if item["property_id"] == "P31":
             filtered.append((item['qid'], item['value']))
-        elif item["property_id"] == "P279" and item["value"] not in cat_keys:
+            if item['value'] in cat_keys:
+                filtered.append((item['qid'], cat_mapping[item['value']]))
+        elif item["property_id"] == "P279":
             filtered.append((item['qid'], item['value']))
-        elif item["property_id"] == "P361" and item["value"] not in cat_keys:
+            if item['value'] in cat_keys:
+                filtered.append((item['qid'], cat_mapping[item['value']]))
+        elif item["property_id"] == "P361":
             filtered.append((item['qid'], item['value']))
+            if item['value'] in cat_keys:
+                filtered.append((item['qid'], cat_mapping[item['value']]))
     return filtered
 
 def get_cat_titles(categories, filename):
