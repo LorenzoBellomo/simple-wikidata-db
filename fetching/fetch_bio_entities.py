@@ -109,13 +109,12 @@ def get_categories_of_external_id_items(subset, filename):
     filtered = []
     for item in jsonl_generator(filename):
         if item['qid'] in subset:
-            for item in jsonl_generator(filename):
-                if item["property_id"] == "P31":
-                    filtered.append((item['qid'], item['value']))
-                elif item["property_id"] == "P279":
-                    filtered.append((item['qid'], item['value']))
-                elif item["property_id"] == "P361":
-                    filtered.append((item['qid'], item['value']))
+            if item["property_id"] == "P31":
+                filtered.append((item['qid'], item['value']))
+            elif item["property_id"] == "P279":
+                filtered.append((item['qid'], item['value']))
+            elif item["property_id"] == "P361":
+                filtered.append((item['qid'], item['value']))
     return filtered
 
 def get_cat_titles(categories, filename):
