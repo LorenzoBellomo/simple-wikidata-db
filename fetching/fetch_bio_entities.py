@@ -28,8 +28,13 @@ with open("../page-redirect_delete.txt", "r") as blacklist_file:
 blacklist_redirect = dict(blacklist_redirect_tmp)
 
 cat_keys = list(cat_mapping.keys())
-processed_dir = "/raid/wikidata/bio_processed/"
-full_preprocessed_dir = "/raid/wikidata/processed/"
+with open("config.json", 'r') as json_file:
+    config = json.load(json_file)
+    full_preprocessed_dir = config['FULL_PREPROCESSED_URL']
+    processed_dir = config['BIO_PREPROCESSED_URL']
+
+with open("../external_id_mapping.json", "r") as json_file:
+    mapping_type_id = json.load(json_file)
 
 def parallel_exec(funct, filename):
     table_files = get_batch_files(processed_dir + filename)
@@ -99,6 +104,18 @@ def get_categories(filename):
                 filtered.append((item['qid'], cat_mapping[item['value']]))
     return filtered
 
+def get_categories_of_external_id_items(subset, filename):
+    filtered = []
+    if item['qid'] in subset:
+        for item in jsonl_generator(filename):
+            if item["property_id"] == "P31":
+                filtered.append((item['qid'], item['value']))
+            elif item["property_id"] == "P279":
+                filtered.append((item['qid'], item['value']))
+            elif item["property_id"] == "P361":
+                filtered.append((item['qid'], item['value']))
+    return filtered
+
 def get_cat_titles(categories, filename):
     filtered = []
     for item in jsonl_generator(filename):
@@ -106,15 +123,31 @@ def get_cat_titles(categories, filename):
             filtered.append((item['qid'], item['label']))
     return filtered
 
+def get_external_ids(filename):
+    filtered = []
+    for item in jsonl_generator(filename):
+        if item['property_id'] in mapping_type_id:
+            id_name = mapping_type_id[item['property_id']]
+            full_id = id_name + item['qid']
+            filtered.append((item['qid'], full_id))
+    return filtered
+
 
 def main():
     titles = parallel_exec(get_titles, "labels")
     aliases = parallel_exec(get_aliases, "aliases")
     categories = parallel_exec(get_categories, "entity_rels")
-    all_ids = [a for a, _ in titles]
+    external_ids_list = parallel_exec(get_external_ids, "external_ids")
+    external_ids = {}
+    for qid, ext_id in external_ids_list:
+        external_ids[qid] = {"ext_id": ext_id, 'cats': list()}
     cats = set()
+    extra_categories = parallel_exec_full(get_categories_of_external_id_items, "labels", list(external_ids.keys()))
+    for qid, cat_id in extra_categories:
+        cats.add(cat_id)
+        external_ids[qid]['cats'].append(cat_id)
+    all_ids = [a for a, _ in titles]
 
-    # columns_ = ['id','main_category', 'title', 'aliases', 'categories', 'wiki_titles', 'bio_id']
     all_data = {k: {'aliases': [], 'categories': []} for k in all_ids}
     for qid, a in titles:
         all_data[qid]['title'] = a
@@ -170,6 +203,13 @@ def main():
             for to_id in random.sample(keys_, 5):
                 title_to = all_data[to_id]['title']
                 pagelinks_file.write(title_from + "\t" + title_to + "\n") 
+
+    with open("../../for_ontotagme/external_ids.csv", 'w') as write_file:
+        for qid, v in external_ids.items():
+            category_to_str = [cat_mapping_titles.get(c, "NO TITLE") for c in v['cats']]
+            category_str = ";".join([a for a in category_to_str if a != "NO TITLE"])
+            # QID   \t    EXTERNAL_ID   \t   cat1;cat2;cat3 \n  (note that external ID is already formatted as bert wants) 
+            write_file.write(qid + "\t" + v['ext_id'] + "\t" + categories_str + "\n")
 
 if __name__ == "__main__":
     main()
