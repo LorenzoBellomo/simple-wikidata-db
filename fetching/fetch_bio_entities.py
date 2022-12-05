@@ -28,10 +28,11 @@ with open("../page-redirect_delete.txt", "r") as blacklist_file:
 blacklist_redirect = dict(blacklist_redirect_tmp)
 
 cat_keys = list(cat_mapping.keys())
-with open("config.json", 'r') as json_file:
+with open("../config.json", 'r') as json_file:
     config = json.load(json_file)
     full_preprocessed_dir = config['FULL_PREPROCESSED_URL']
     processed_dir = config['BIO_PREPROCESSED_URL']
+    ontotagme_dir = config["FOR_ONTOTAGME_URL"]
 
 with open("../external_id_mapping.json", "r") as json_file:
     mapping_type_id = json.load(json_file)
@@ -106,14 +107,15 @@ def get_categories(filename):
 
 def get_categories_of_external_id_items(subset, filename):
     filtered = []
-    if item['qid'] in subset:
-        for item in jsonl_generator(filename):
-            if item["property_id"] == "P31":
-                filtered.append((item['qid'], item['value']))
-            elif item["property_id"] == "P279":
-                filtered.append((item['qid'], item['value']))
-            elif item["property_id"] == "P361":
-                filtered.append((item['qid'], item['value']))
+    for item in jsonl_generator(filename):
+        if item['qid'] in subset:
+            for item in jsonl_generator(filename):
+                if item["property_id"] == "P31":
+                    filtered.append((item['qid'], item['value']))
+                elif item["property_id"] == "P279":
+                    filtered.append((item['qid'], item['value']))
+                elif item["property_id"] == "P361":
+                    filtered.append((item['qid'], item['value']))
     return filtered
 
 def get_cat_titles(categories, filename):
@@ -166,7 +168,7 @@ def main():
     title_cats = parallel_exec_full(get_cat_titles, "labels", list(cats))
     cat_mapping_titles = {k: v for k, v in title_cats}
 
-    with open("../../for_ontotagme/page.csv", 'w') as page_file:
+    with open("{}page.csv".format(ontotagme_dir), 'w') as page_file:
         for qid, info in all_data.items():
             if qid in blacklist_page:
                 continue
@@ -181,7 +183,7 @@ def main():
                         if new_alias != alias:
                             page_file.write(new_alias + "\t" + qid + "\t" + str(all_data[qid]['title']) + "\n")
 
-    with open("../../for_ontotagme/category.csv", 'w') as cat_file:
+    with open("{}category.csv".format(ontotagme_dir), 'w') as cat_file:
         for qid, info in all_data.items():
             all_cats = set([cat_mapping_titles.get(a, "NO TITLE") for a in list(info['categories'])])
             for y in [cat_mapping[x] for x in info['categories'] if x in cat_mapping.keys()]:
@@ -191,7 +193,7 @@ def main():
             for alias in info['aliases']:
                 cat_file.write(alias + '\t' + qid + "\t" + categories_str + "\n")
     
-    with open("../../for_ontotagme/pagelinks.csv", 'w') as pagelinks_file:
+    with open("{}pagelinks.csv".format(ontotagme_dir), 'w') as pagelinks_file:
         for from_id, to_id in pagelinks:
             if from_id in all_data and to_id in all_data:
                 title_from = all_data[from_id]['title']
@@ -204,12 +206,15 @@ def main():
                 title_to = all_data[to_id]['title']
                 pagelinks_file.write(title_from + "\t" + title_to + "\n") 
 
-    with open("../../for_ontotagme/external_ids.csv", 'w') as write_file:
+    with open("{}external_ids.csv".format(ontotagme_dir), 'w') as write_file:
+        j = 0
         for qid, v in external_ids.items():
             category_to_str = [cat_mapping_titles.get(c, "NO TITLE") for c in v['cats']]
-            category_str = ";".join([a for a in category_to_str if a != "NO TITLE"])
+            categories_str = ";".join([a for a in category_to_str if a != "NO TITLE"])
             # QID   \t    EXTERNAL_ID   \t   cat1;cat2;cat3 \n  (note that external ID is already formatted as bert wants) 
             write_file.write(qid + "\t" + v['ext_id'] + "\t" + categories_str + "\n")
+            j = j + 1
+    print("tot number of external IDs", j)
 
 if __name__ == "__main__":
     main()
