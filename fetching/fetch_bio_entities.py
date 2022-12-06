@@ -33,6 +33,7 @@ with open("../config.json", 'r') as json_file:
     full_preprocessed_dir = config['FULL_PREPROCESSED_URL']
     processed_dir = config['BIO_PREPROCESSED_URL']
     ontotagme_dir = config["FOR_ONTOTAGME_URL"]
+    external_dir = config['EXTERNAL_IDS_PROCESSED']
 
 with open("../external_id_mapping.json", "r") as json_file:
     mapping_type_id = json.load(json_file)
@@ -108,13 +109,12 @@ def get_categories(filename):
 def get_categories_of_external_id_items(subset, filename):
     filtered = []
     for item in jsonl_generator(filename):
-        if item['qid'] in subset:
-            if item["property_id"] == "P31":
-                filtered.append((item['qid'], item['value']))
-            elif item["property_id"] == "P279":
-                filtered.append((item['qid'], item['value']))
-            elif item["property_id"] == "P361":
-                filtered.append((item['qid'], item['value']))
+        if item["property_id"] == "P31":
+            filtered.append((item['qid'], item['value']))
+        elif item["property_id"] == "P279":
+            filtered.append((item['qid'], item['value']))
+        elif item["property_id"] == "P361":
+            filtered.append((item['qid'], item['value']))
     return filtered
 
 def get_cat_titles(categories, filename):
@@ -124,12 +124,12 @@ def get_cat_titles(categories, filename):
             filtered.append((item['qid'], item['label']))
     return filtered
 
-def get_external_ids(filename):
+def get_external_ids(args, filename):
     filtered = []
     for item in jsonl_generator(filename):
         if item['property_id'] in mapping_type_id:
             id_name = mapping_type_id[item['property_id']]
-            full_id = id_name + item['qid']
+            full_id = id_name + ":" + item['value']
             filtered.append((item['qid'], full_id))
     return filtered
 
@@ -138,12 +138,12 @@ def main():
     titles = parallel_exec(get_titles, "labels")
     aliases = parallel_exec(get_aliases, "aliases")
     categories = parallel_exec(get_categories, "entity_rels")
-    external_ids_list = parallel_exec(get_external_ids, "external_ids")
+    external_ids_list = parallel_exec_full(get_external_ids, "external_ids", None)
     external_ids = {}
     for qid, ext_id in external_ids_list:
         external_ids[qid] = {"ext_id": ext_id, 'cats': list()}
     cats = set()
-    extra_categories = parallel_exec_full(get_categories_of_external_id_items, "labels", list(external_ids.keys()))
+    extra_categories = parallel_exec_full(get_categories_of_external_id_items, "entity_rels", list(external_ids.keys()))
     for qid, cat_id in extra_categories:
         cats.add(cat_id)
         external_ids[qid]['cats'].append(cat_id)
