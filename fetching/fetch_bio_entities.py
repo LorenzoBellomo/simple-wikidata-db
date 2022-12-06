@@ -65,6 +65,15 @@ def parallel_exec_arg(funct, filename, args):
     print(f"Extracted {len(filtered)} rows:")
     return filtered
 
+def parallel_exec_ext_ids(funct, filename):
+    table_files = get_batch_files(external_dir + filename)
+    pool = Pool(processes=10)
+    filtered = []
+    for output in tqdm(pool.imap_unordered(partial(funct), table_files, chunksize=1), total=len(table_files)):
+        filtered.extend(output)
+    print(f"Extracted {len(filtered)} rows:")
+    return filtered
+
 def get_wikipedias(filename):
     filtered = []
     for item in jsonl_generator(filename):
@@ -106,7 +115,7 @@ def get_categories(filename):
                 filtered.append((item['qid'], cat_mapping[item['value']]))
     return filtered
 
-def get_categories_of_external_id_items(subset, filename):
+def get_categories_of_external_id_items(filename):
     filtered = []
     for item in jsonl_generator(filename):
         if item["property_id"] == "P31":
@@ -138,12 +147,12 @@ def main():
     titles = parallel_exec(get_titles, "labels")
     aliases = parallel_exec(get_aliases, "aliases")
     categories = parallel_exec(get_categories, "entity_rels")
-    external_ids_list = parallel_exec_full(get_external_ids, "external_ids", None)
+    external_ids_list = parallel_exec_ext_ids(get_external_ids, "external_ids")
     external_ids = {}
     for qid, ext_id in external_ids_list:
         external_ids[qid] = {"ext_id": ext_id, 'cats': list()}
     cats = set()
-    extra_categories = parallel_exec_full(get_categories_of_external_id_items, "entity_rels", list(external_ids.keys()))
+    extra_categories = parallel_exec_ext_ids(get_categories_of_external_id_items, "entity_rels")
     for qid, cat_id in extra_categories:
         cats.add(cat_id)
         external_ids[qid]['cats'].append(cat_id)
