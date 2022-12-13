@@ -65,11 +65,11 @@ def parallel_exec_arg(funct, filename, args):
     print(f"Extracted {len(filtered)} rows:")
     return filtered
 
-def parallel_exec_ext_ids(funct, filename):
+def parallel_exec_ext_ids(funct, filename, args):
     table_files = get_batch_files(external_dir + filename)
     pool = Pool(processes=10)
     filtered = []
-    for output in tqdm(pool.imap_unordered(partial(funct), table_files, chunksize=1), total=len(table_files)):
+    for output in tqdm(pool.imap_unordered(partial(funct, args), table_files, chunksize=1), total=len(table_files)):
         filtered.extend(output)
     print(f"Extracted {len(filtered)} rows:")
     return filtered
@@ -115,15 +115,16 @@ def get_categories(filename):
                 filtered.append((item['qid'], cat_mapping[item['value']]))
     return filtered
 
-def get_categories_of_external_id_items(filename):
+def get_categories_of_external_id_items(which, filename):
     filtered = []
     for item in jsonl_generator(filename):
-        if item["property_id"] == "P31":
-            filtered.append((item['qid'], item['value']))
-        elif item["property_id"] == "P279":
-            filtered.append((item['qid'], item['value']))
-        elif item["property_id"] == "P361":
-            filtered.append((item['qid'], item['value']))
+        if item['qid'] in which:
+            if item["property_id"] == "P31":
+                filtered.append((item['qid'], item['value']))
+            elif item["property_id"] == "P279":
+                filtered.append((item['qid'], item['value']))
+            elif item["property_id"] == "P361":
+                filtered.append((item['qid'], item['value']))
     return filtered
 
 def get_cat_titles(categories, filename):
@@ -142,20 +143,32 @@ def get_external_ids(args, filename):
             filtered.append((item['qid'], full_id))
     return filtered
 
+def get_external_titles(args, filename):
+    filtered = []
+    for item in jsonl_generator(filename):
+        filtered.append((item['qid'], item['label']))
+    return filtered
+
 
 def main():
     titles = parallel_exec(get_titles, "labels")
     aliases = parallel_exec(get_aliases, "aliases")
     categories = parallel_exec(get_categories, "entity_rels")
-    external_ids_list = parallel_exec_ext_ids(get_external_ids, "external_ids")
+    external_ids_list = parallel_exec_ext_ids(get_external_ids, "external_ids", None)
+    external_ids_title = parallel_exec_ext_ids(get_external_titles, "labels", None)
     external_ids = {}
     for qid, ext_id in external_ids_list:
         external_ids[qid] = {"ext_id": ext_id, 'cats': list()}
+    for qid, title in external_ids_title:
+        if qid in external_ids:
+            external_ids[qid]['title'] = title
     cats = set()
-    extra_categories = parallel_exec_ext_ids(get_categories_of_external_id_items, "entity_rels")
+    extra_categories = parallel_exec_ext_ids(get_categories_of_external_id_items, "entity_rels", list(external_ids.keys()))
+    j = 0
     for qid, cat_id in extra_categories:
         cats.add(cat_id)
         external_ids[qid]['cats'].append(cat_id)
+    print(j, "-", len(extra_categories))
     all_ids = [a for a, _ in titles]
 
     all_data = {k: {'aliases': [], 'categories': []} for k in all_ids}
@@ -220,7 +233,7 @@ def main():
             category_to_str = [cat_mapping_titles.get(c, "NO TITLE") for c in v['cats']]
             categories_str = ";".join([a for a in category_to_str if a != "NO TITLE"])
             # QID   \t    EXTERNAL_ID   \t   cat1;cat2;cat3 \n  (note that external ID is already formatted as bert wants) 
-            write_file.write(qid + "\t" + v['ext_id'] + "\t" + categories_str + "\n")
+            write_file.write(qid + "\t" + v['title'] + "\t" + v['ext_id'] + "\t" + categories_str + "\n")
             j = j + 1
     print("tot number of external IDs", j)
 
