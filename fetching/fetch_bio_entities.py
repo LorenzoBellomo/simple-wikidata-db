@@ -158,7 +158,7 @@ def main():
     external_ids_title = parallel_exec_ext_ids(get_external_titles, "labels", None)
     external_ids = {}
     for qid, ext_id in external_ids_list:
-        external_ids[qid] = {"ext_id": ext_id, 'cats': list()}
+        external_ids[qid] = {"ext_id": ext_id, 'cats': list(), 'title': "UNKNOWN TITLE"}
     for qid, title in external_ids_title:
         if qid in external_ids:
             external_ids[qid]['title'] = title
