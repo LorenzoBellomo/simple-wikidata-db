@@ -164,11 +164,9 @@ def main():
             external_ids[qid]['title'] = title
     cats = set()
     extra_categories = parallel_exec_ext_ids(get_categories_of_external_id_items, "entity_rels", list(external_ids.keys()))
-    j = 0
     for qid, cat_id in extra_categories:
         cats.add(cat_id)
         external_ids[qid]['cats'].append(cat_id)
-    print(j, "-", len(extra_categories))
     all_ids = [a for a, _ in titles]
 
     all_data = {k: {'aliases': [], 'categories': []} for k in all_ids}
