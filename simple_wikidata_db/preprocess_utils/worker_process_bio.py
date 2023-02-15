@@ -14,8 +14,6 @@ ALIAS_PROPERTIES = {'P138', 'P734', 'P735', 'P742', 'P1448', 'P1449', 'P1477', '
 IGNORE = {'wikibase-lexeme', 'musical-notation', 'globe-coordinate', 'commonsMedia', 'geo-shape', 'wikibase-sense',
           'wikibase-property', 'math', 'tabular-data'}
 
-reg = re.compile(r"[^A-Za-z ]+")
-
 with open("../bio_mapping.json", "r") as json_file:
     CAT_MAPPING = ujson.load(json_file)
 CAT_KEYS = list(CAT_MAPPING.keys())
@@ -108,11 +106,10 @@ def process_json(obj, language_id="en"):
     # extract aliases
     if language_id in obj['aliases']:
         for alias in obj['aliases'][language_id]:
-            if reg.findall(alias):
-                out_data['aliases'].append({
-                    'qid': id,
-                    'alias': alias['value'],
-                })
+            out_data['aliases'].append({
+                'qid': id,
+                'alias': alias['value'],
+            })
 
     # extract english wikipedia sitelink -- we just add this to the external links table
     if f'{language_id}wiki' in obj['sitelinks']:
