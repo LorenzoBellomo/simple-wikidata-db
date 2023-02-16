@@ -11,6 +11,8 @@ import random
 
 from utils import jsonl_generator, get_batch_files
 
+pattern = re.compile(r"[^A-Za-z ]+")
+
 #INSTANCE OF, SUBCLASS OF, TUTTE LE WIKI CAT IN CATEGORIE
 
 with open("../bio_mapping.json", "r") as json_file:
@@ -89,7 +91,8 @@ def get_titles(filename):
 def get_aliases(filename):
     filtered = []
     for item in jsonl_generator(filename):
-        filtered.append((item['qid'], item['alias']))
+        if pattern.match(item['alias']):
+            filtered.append((item['qid'], item['alias']))
     return filtered
 
 def get_pagelinks(filename):
