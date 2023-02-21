@@ -11,9 +11,10 @@ import random
 
 from utils import jsonl_generator, get_batch_files
 
-pattern = re.compile(r"[^A-Za-z ]+")
+pattern = re.compile(r"[^a-z]+")
 
 #INSTANCE OF, SUBCLASS OF, TUTTE LE WIKI CAT IN CATEGORIE
+#nitrilase/cyanide hydratase and apolipoprotein N-acyltransferase KVU_PB0054
 
 with open("../bio_mapping.json", "r") as json_file:
     cat_mapping = json.load(json_file)
@@ -91,7 +92,7 @@ def get_titles(filename):
 def get_aliases(filename):
     filtered = []
     for item in jsonl_generator(filename):
-        if pattern.match(item['alias']):
+        if pattern.search(item['alias']):
             filtered.append((item['qid'], item['alias']))
     return filtered
 
